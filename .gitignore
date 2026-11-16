@@ -8,3 +8,5 @@ captures/
 *.keystore
 *.jks
 .env
+.local-test/
+dist/
