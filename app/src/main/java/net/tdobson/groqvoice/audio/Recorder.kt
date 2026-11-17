@@ -3,6 +3,7 @@ package net.tdobson.groqvoice.audio
 import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.SystemClock
 import net.tdobson.groqvoice.core.controller.AudioRecorder
 import net.tdobson.groqvoice.util.Logx
 import java.io.File
@@ -14,9 +15,11 @@ import java.io.File
 class Recorder(
     private val context: Context,
     private val maxDurationMs: Int = 60 * 60 * 1000,
+    private val now: () -> Long = SystemClock::elapsedRealtime,
 ) : AudioRecorder {
     private var recorder: MediaRecorder? = null
     private var file: File? = null
+    private var startedAt = 0L
     @Volatile private var maxReached = false
 
     override fun start(file: File, onMaxDuration: () -> Unit): Boolean {
@@ -43,6 +46,7 @@ class Recorder(
             r.start()
             recorder = r
             this.file = file
+            startedAt = now()
             true
         } catch (e: Exception) {
             Logx.w(e) { "recorder failed to start" }
@@ -57,9 +61,12 @@ class Recorder(
         val f = file
         recorder = null
         file = null
+        // MediaRecorder may or may not manage to finalise a few milliseconds of audio; either way it is not
+        // speech, so anything shorter than MIN_RECORDING_MS is consistently "nothing recorded".
+        val longEnough = now() - startedAt >= MIN_RECORDING_MS
         val ok = try {
             r.stop()
-            true
+            longEnough
         } catch (e: RuntimeException) {
             // stop() throws when no audio was captured yet. After the max-duration stop the file is already final.
             Logx.w(e) { "recorder stop failed (maxReached=$maxReached)" }
@@ -92,5 +99,6 @@ class Recorder(
     companion object {
         const val SAMPLE_RATE = 16_000
         const val BIT_RATE = 24_000
+        const val MIN_RECORDING_MS = 250L
     }
 }
