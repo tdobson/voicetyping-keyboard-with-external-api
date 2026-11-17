@@ -6,7 +6,6 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.core.content.edit
-import net.tdobson.groqvoice.core.controller.ApiKeyProvider
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -20,10 +19,10 @@ import javax.crypto.spec.GCMParameterSpec
 class ApiKeyStore(
     private val prefs: SharedPreferences,
     private val keyAlias: String = DEFAULT_ALIAS,
-) : ApiKeyProvider {
+) : KeyStorage {
 
     @Synchronized
-    fun save(apiKey: String) {
+    override fun save(apiKey: String) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, existingKey() ?: generateKey())
         val ct = cipher.doFinal(apiKey.toByteArray(Charsets.UTF_8))
@@ -51,9 +50,9 @@ class ApiKeyStore(
     }
 
     @Synchronized
-    fun clear() = prefs.edit(commit = true) { remove(CT); remove(IV) }
+    override fun clear() = prefs.edit(commit = true) { remove(CT); remove(IV) }
 
-    fun hasKey(): Boolean = apiKey() != null
+    override fun hasKey(): Boolean = apiKey() != null
 
     private fun keyStore(): KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 

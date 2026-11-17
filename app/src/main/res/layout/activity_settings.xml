@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:text="@string/app_name"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <!-- API key -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_api_key" />
+
+        <EditText
+            android:id="@+id/api_key_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/api_key_hint"
+            android:importantForAutofill="no"
+            android:inputType="textPassword"
+            android:minHeight="48dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/save_key_button"
+                style="?attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/save_key" />
+
+            <Button
+                android:id="@+id/test_key_button"
+                style="?attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/test_key" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/test_key_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="24dp" />
+
+        <!-- Microphone -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_microphone" />
+
+        <TextView
+            android:id="@+id/mic_permission_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/mic_permission_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/allow_microphone" />
+
+        <!-- Keyboard -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_keyboard" />
+
+        <Button
+            android:id="@+id/enable_keyboard_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/enable_keyboard" />
+
+        <Button
+            android:id="@+id/choose_keyboard_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/choose_keyboard" />
+
+        <!-- Transcription -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_transcription" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:labelFor="@+id/model_spinner"
+            android:text="@string/model_label" />
+
+        <Spinner
+            android:id="@+id/model_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:labelFor="@+id/language_input"
+            android:text="@string/language_label" />
+
+        <EditText
+            android:id="@+id/language_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/language_hint"
+            android:imeOptions="actionDone"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:minHeight="48dp" />
+
+        <!-- Feedback -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_feedback" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/sound_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/sound_switch" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/haptic_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/haptic_switch" />
+
+        <!-- Unsent -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_unsent" />
+
+        <TextView
+            android:id="@+id/unsent_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/delete_unsent_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/delete_unsent" />
+
+        <!-- Try it here -->
+        <TextView style="@style/SettingsHeading" android:text="@string/heading_try" />
+
+        <EditText
+            android:id="@+id/try_it_here"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top|start"
+            android:hint="@string/try_it_here"
+            android:importantForAutofill="no"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="4" />
+    </LinearLayout>
+</ScrollView>

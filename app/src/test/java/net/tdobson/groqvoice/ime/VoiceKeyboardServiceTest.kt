@@ -1,6 +1,7 @@
 package net.tdobson.groqvoice.ime
 
 import android.content.Context
+import android.content.Intent
 import android.os.Looper
 import android.os.SystemClock
 import android.text.InputType
@@ -10,9 +11,11 @@ import android.view.inputmethod.EditorInfo
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import net.tdobson.groqvoice.R
+import net.tdobson.groqvoice.settings.SettingsActivity
 import net.tdobson.groqvoice.storage.AppStorage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,5 +87,43 @@ class VoiceKeyboardServiceTest {
         val (_, view) = startService(editor(EditorInfo.IME_ACTION_DONE))
         assertEquals("Hold to talk, slide up to lock", text(view, R.id.status_text))
         assertEquals(View.GONE, view.findViewById<View>(R.id.unsent_chip).visibility)
+    }
+
+    @Test fun `tapping the no-key status opens the settings activity`() {
+        val (service, view) = startService(editor(EditorInfo.IME_ACTION_DONE))
+        val mic = view.findViewById<View>(R.id.mic_button)
+        val t = SystemClock.uptimeMillis()
+        mic.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, 10f, 10f, 0))
+        mic.dispatchTouchEvent(MotionEvent.obtain(t, t + 100, MotionEvent.ACTION_UP, 10f, 10f, 0))
+        view.findViewById<View>(R.id.status_text).performClick()
+        val next = shadowOf(service).nextStartedActivity
+        assertEquals(SettingsActivity::class.java.name, next.component?.className)
+        assertTrue(next.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+    }
+
+    @Test fun `tapping an ordinary status does nothing`() {
+        val (service, view) = startService(editor(EditorInfo.IME_ACTION_DONE))
+        view.findViewById<View>(R.id.status_text).performClick()
+        assertNull(shadowOf(service).nextStartedActivity)
+    }
+
+    @Test fun `a transient hint from the last field is cleared when a new field starts`() {
+        val (service, view) = startService(editor(EditorInfo.IME_ACTION_DONE))
+        service.onStatus(net.tdobson.groqvoice.core.controller.Status.HoldToTalk)
+        assertEquals("Hold to talk", text(view, R.id.status_text))
+        val next = editor(EditorInfo.IME_ACTION_SEND).apply { fieldId = 43 }
+        service.onFinishInputView(true)
+        service.onStartInput(next, false)
+        service.onStartInputView(next, false)
+        assertEquals("Hold to talk, slide up to lock", text(view, R.id.status_text))
+    }
+
+    @Test fun `text ready and errors survive a field change`() {
+        val (service, view) = startService(editor(EditorInfo.IME_ACTION_DONE))
+        service.onStatus(net.tdobson.groqvoice.core.controller.Status.TextReady)
+        val next = editor(EditorInfo.IME_ACTION_SEND).apply { fieldId = 43 }
+        service.onStartInput(next, false)
+        service.onStartInputView(next, false)
+        assertEquals("Text ready, tap ↺ to insert", text(view, R.id.status_text))
     }
 }

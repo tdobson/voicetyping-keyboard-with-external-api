@@ -252,6 +252,18 @@ class KeyboardViewBinderTest {
         assertEquals(listOf(GestureEvent.Hold), actions.gestures)
     }
 
+    @Test fun `bottom padding grows by the navigation bar inset so system buttons do not cover the keys`() {
+        val base = root.paddingBottom
+        val insets = androidx.core.view.WindowInsetsCompat.Builder()
+            .setInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars(), androidx.core.graphics.Insets.of(0, 0, 0, 63))
+            .build()
+        androidx.core.view.ViewCompat.dispatchApplyWindowInsets(root, insets)
+        assertEquals(base + 63, root.paddingBottom)
+        // Applying again (e.g. rotation) does not accumulate.
+        androidx.core.view.ViewCompat.dispatchApplyWindowInsets(root, insets)
+        assertEquals(base + 63, root.paddingBottom)
+    }
+
     @Test fun `release stops the recording ticker`() {
         binder.showStatus(Status.Recording(now, locked = false))
         binder.release()

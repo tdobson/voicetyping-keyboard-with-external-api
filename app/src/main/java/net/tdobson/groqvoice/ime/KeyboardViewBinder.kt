@@ -8,6 +8,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import net.tdobson.groqvoice.R
 import net.tdobson.groqvoice.core.controller.Status
 import net.tdobson.groqvoice.core.controller.StatusFormatter
@@ -71,6 +73,7 @@ class KeyboardViewBinder(
 
     init {
         wireTouchKeys()
+        padForNavigationBar()
         root.findViewById<View>(R.id.key_space).setOnClickListener { actions.onSpace() }
         enter.setOnClickListener { actions.onEnter() }
         root.findViewById<View>(R.id.key_reinsert).setOnClickListener { actions.onReinsert() }
@@ -122,6 +125,22 @@ class KeyboardViewBinder(
         handler.removeCallbacks(tick)
         handler.removeCallbacks(repeatBackspace)
         stopPulse()
+    }
+
+    /**
+     * The IME window is edge-to-edge (targetSdk 35+): the system draws its IME navigation bar (hide and switch
+     * buttons, gesture handle) over the bottom of our view, so the bottom row must sit above it.
+     */
+    private fun padForNavigationBar() {
+        val left = root.paddingLeft
+        val top = root.paddingTop
+        val right = root.paddingRight
+        val bottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.tappableElement())
+            v.setPadding(left + nav.left, top, right + nav.right, bottom + nav.bottom)
+            insets
+        }
     }
 
     /**

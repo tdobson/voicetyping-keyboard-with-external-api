@@ -3,10 +3,12 @@ package net.tdobson.groqvoice.ime
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ClipboardManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.inputmethodservice.InputMethodService
 import android.net.ConnectivityManager
 import android.os.SystemClock
+import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -32,6 +34,7 @@ import net.tdobson.groqvoice.core.net.GroqReachabilityProbe
 import net.tdobson.groqvoice.net.AndroidConnectivityWaiter
 import net.tdobson.groqvoice.security.ApiKeyStore
 import net.tdobson.groqvoice.settings.AppSettings
+import net.tdobson.groqvoice.settings.SettingsActivity
 import net.tdobson.groqvoice.storage.AppStorage
 import net.tdobson.groqvoice.util.Logx
 
@@ -106,6 +109,8 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
         super.onStartInputView(info, restarting)
         binder?.setEnterLabel(EnterKeyResolver.label(enterAction(info)))
         controller.refreshPendingCount()
+        // Hints about the last gesture are stale in a new field; "Text ready", errors and work in flight are not.
+        if (!restarting && lastStatus in TRANSIENT_HINTS) onStatus(Status.Idle)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
@@ -150,7 +155,12 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
         keyTap()
         val info = currentInputEditorInfo
         if (enterAction(info) == EnterAction.Newline) {
-            sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
+            // Like AOSP LatinIME: commit "\n" to text fields; raw key events only for TYPE_NULL fields (terminals).
+            if (info == null || info.inputType == InputType.TYPE_NULL) {
+                sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
+            } else {
+                currentInputConnection?.commitText("\n", 1)
+            }
         } else {
             currentInputConnection?.performEditorAction(info.imeOptions and EditorInfo.IME_MASK_ACTION)
         }
@@ -194,9 +204,7 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
     }
 
     private fun openSettings() {
-        val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return
-        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
+        startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     private fun keyTap() {
@@ -209,4 +217,8 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
 
     private fun enterAction(info: EditorInfo?): EnterAction =
         if (info == null) EnterAction.Newline else EnterKeyResolver.resolve(info.imeOptions, info.inputType)
+
+    private companion object {
+        val TRANSIENT_HINTS = setOf(Status.HoldToTalk, Status.NothingHeard, Status.Cancelled)
+    }
 }
