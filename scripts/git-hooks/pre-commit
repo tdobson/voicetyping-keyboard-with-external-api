@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Tracked pre-commit hook (installed by scripts/install-hooks.sh): layer 0 guards plus layers 1-2.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+source scripts/env.sh
+t0=$(date +%s)
+scripts/guards.sh --staged
+./gradlew -q --console=plain testDebugUnitTest --tests 'net.tdobson.groqvoice.core.*'
+echo "pre-commit: guards + layers 1-2 passed in $(( $(date +%s) - t0 ))s"
