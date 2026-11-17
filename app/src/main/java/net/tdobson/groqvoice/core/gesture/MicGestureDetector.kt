@@ -89,6 +89,22 @@ class MicGestureDetector(private val config: GestureConfig = GestureConfig(), pr
         }
     }
 
+    /** The recording ended without this detector (max duration, keyboard hidden, refused): forget any press. */
+    fun reset() {
+        state = State.Idle
+        stopTapDown = false
+    }
+
+    /**
+     * A recording is running that this detector did not start (an accessibility click, or a view recreated
+     * mid-recording): treat it as locked, so the next tap is the Stop tap. No-op unless idle.
+     */
+    fun adoptRecording() {
+        if (state != State.Idle) return
+        state = State.Locked
+        stopTapDown = false
+    }
+
     private fun liftResult(timeMs: Long) =
         if (timeMs - downTimeMs >= config.holdMs) GestureEvent.Release else GestureEvent.TooShort
 

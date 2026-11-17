@@ -154,5 +154,38 @@ class MicGestureDetectorTest {
         assertEquals(90f, c.cancelSlideDp)
     }
 
+    @Test fun `reset forgets a locked recording so the next press starts a new one`() {
+        down(); move(dy = -71f); up(700)
+        d.reset()
+        assertEquals(State.Idle, d.state)
+        assertEquals(Hold, d.onDown(X, Y, 5_000))
+    }
+
+    @Test fun `reset while held makes the lift do nothing`() {
+        down(0)
+        d.reset()
+        assertNull(up(900))
+        assertEquals(State.Idle, d.state)
+    }
+
+    @Test fun `adopting a recording it did not start makes the next tap Stop`() {
+        d.adoptRecording()
+        assertEquals(State.Locked, d.state)
+        assertNull(d.onDown(X, Y, 0))
+        assertEquals(Release, d.onUp(X, Y, 80))
+        assertEquals(State.Idle, d.state)
+    }
+
+    @Test fun `adopting while pressed or locked changes nothing`() {
+        down(0)
+        d.adoptRecording()
+        assertEquals(State.Pressed, d.state)
+        assertEquals(Release, up(600))
+        down(1_000); move(dy = -71f, t = 1_050)
+        d.onDown(X, Y, 2_000) // the Stop tap has started
+        d.adoptRecording()
+        assertEquals(Release, d.onUp(X, Y, 2_080))
+    }
+
     private companion object { const val X = 100f; const val Y = 100f }
 }

@@ -247,6 +247,71 @@ class KeyboardViewBinderTest {
         assertEquals(listOf(GestureEvent.Hold, GestureEvent.Lock, GestureEvent.Release), actions.gestures)
     }
 
+    /** Answers gestures the way the service and controller do, so the binder sees the real status sequence. */
+    private fun echoingBinder(on: View = root): KeyboardViewBinder {
+        lateinit var b: KeyboardViewBinder
+        b = KeyboardViewBinder(on, object : KeyboardActions by actions {
+            override fun onMicGesture(event: GestureEvent) {
+                actions.onMicGesture(event)
+                when (event) {
+                    GestureEvent.Hold -> b.showStatus(Status.Recording(now, locked = false))
+                    GestureEvent.Lock -> b.showStatus(Status.Recording(now, locked = true))
+                    GestureEvent.Release -> b.showStatus(Status.Transcribing)
+                    GestureEvent.Cancel -> b.showStatus(Status.Idle)
+                    GestureEvent.TooShort -> b.showStatus(Status.HoldToTalk)
+                }
+            }
+        }, GestureConfig(), clock = { now })
+        return b
+    }
+
+    private fun lockByTouch(mic: View) {
+        val up = 100 * density
+        touch(mic, MotionEvent.ACTION_DOWN, 40f, 40f, 1_000, 1_000)
+        touch(mic, MotionEvent.ACTION_MOVE, 40f, 40f - up, 1_000, 1_300)
+        touch(mic, MotionEvent.ACTION_UP, 40f, 40f - up, 1_000, 1_400)
+    }
+
+    @Test fun `after the max-duration stop of a locked recording the next press starts a new recording`() {
+        binder = echoingBinder()
+        val mic = v<View>(R.id.mic_button)
+        lockByTouch(mic)
+        // The 60-minute cap stops the recording without any touch.
+        binder.showStatus(Status.Transcribing)
+        actions.gestures.clear()
+        touch(mic, MotionEvent.ACTION_DOWN, 40f, 40f, 9_000, 9_000)
+        assertEquals(listOf(GestureEvent.Hold), actions.gestures)
+    }
+
+    @Test fun `a view recreated while a locked recording runs can stop it with a tap`() {
+        val fresh = LayoutInflater.from(context).inflate(R.layout.keyboard, null)
+        val b = KeyboardViewBinder(fresh, actions, GestureConfig(), clock = { now })
+        b.showStatus(Status.Recording(now - 5_000, locked = true))
+        val mic = fresh.findViewById<View>(R.id.mic_button)
+        touch(mic, MotionEvent.ACTION_DOWN, 40f, 40f, 9_000, 9_000)
+        touch(mic, MotionEvent.ACTION_UP, 40f, 40f, 9_000, 9_080)
+        assertEquals(listOf(GestureEvent.Release), actions.gestures)
+    }
+
+    @Test fun `a recording started by an accessibility click can be stopped by touching Stop`() {
+        binder = echoingBinder()
+        val mic = v<View>(R.id.mic_button)
+        mic.performClick()
+        assertEquals(listOf(GestureEvent.Hold, GestureEvent.Lock), actions.gestures)
+        touch(mic, MotionEvent.ACTION_DOWN, 40f, 40f, 9_000, 9_000)
+        touch(mic, MotionEvent.ACTION_UP, 40f, 40f, 9_000, 9_080)
+        assertEquals(listOf(GestureEvent.Hold, GestureEvent.Lock, GestureEvent.Release), actions.gestures)
+    }
+
+    @Test fun `a status that ends the recording mid-hold makes the lift do nothing`() {
+        binder = echoingBinder()
+        val mic = v<View>(R.id.mic_button)
+        touch(mic, MotionEvent.ACTION_DOWN, 40f, 40f, 1_000, 1_000)
+        binder.showStatus(Status.Transcribing)
+        touch(mic, MotionEvent.ACTION_UP, 40f, 40f, 1_000, 1_900)
+        assertEquals(listOf(GestureEvent.Hold), actions.gestures)
+    }
+
     @Test fun `accessibility click when the recording is refused does not lock`() {
         v<View>(R.id.mic_button).performClick()
         assertEquals(listOf(GestureEvent.Hold), actions.gestures)

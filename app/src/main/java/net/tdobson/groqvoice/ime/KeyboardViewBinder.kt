@@ -53,7 +53,7 @@ class KeyboardViewBinder(
     private val backspace: View = root.findViewById(R.id.key_backspace)
     private val enter: TextView = root.findViewById(R.id.key_enter)
 
-    private var detector = MicGestureDetector(gestureConfig, density)
+    private val detector = MicGestureDetector(gestureConfig, density)
     private var status: Status = Status.Idle
     private var pulse: ValueAnimator? = null
 
@@ -89,6 +89,7 @@ class KeyboardViewBinder(
 
     fun showStatus(newStatus: Status) {
         status = newStatus
+        syncGesture(newStatus)
         handler.removeCallbacks(tick)
         renderStatusText()
         val recording = newStatus as? Status.Recording
@@ -116,8 +117,20 @@ class KeyboardViewBinder(
     }
 
     /** Forget a press in progress, e.g. when the controller refused to start recording. */
-    fun resetGesture() {
-        detector = MicGestureDetector(gestureConfig, density)
+    fun resetGesture() = detector.reset()
+
+    /**
+     * The controller's status is the truth about recording; the detector only knows what touches it saw. A
+     * recording that ended elsewhere (60-minute cap, keyboard hidden) leaves the detector idle so the next press
+     * starts afresh; a recording this detector did not start (accessibility click, view recreated mid-recording)
+     * is adopted as locked so the visible Stop works.
+     */
+    private fun syncGesture(s: Status) {
+        if (s !is Status.Recording) {
+            if (detector.state != MicGestureDetector.State.Idle) detector.reset()
+        } else {
+            detector.adoptRecording()
+        }
     }
 
     /** The view is going away: stop timers and animations. */
