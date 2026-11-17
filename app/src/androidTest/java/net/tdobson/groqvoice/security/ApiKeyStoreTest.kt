@@ -106,6 +106,42 @@ class ApiKeyStoreTest {
         assertFalse(s.hasKey())
     }
 
+    private fun ciphertextStored() = prefs.all.keys.any { it.contains("ct") }
+
+    @Test fun transientKeystoreFailureKeepsTheCiphertext() {
+        store().save("test-key-123")
+        for (failure in listOf(java.security.ProviderException("keystore busy"), java.security.KeyStoreException("not ready"))) {
+            val flaky = ApiKeyStore(prefs, alias, loadKey = { throw failure })
+            assertNull(flaky.apiKey())
+            assertTrue("ciphertext kept after ${failure.javaClass.simpleName}", ciphertextStored())
+        }
+        assertEquals("the next call succeeds", "test-key-123", store().apiKey())
+    }
+
+    @Test fun tamperedCiphertextClearsTheStoredData() {
+        store().save("test-key-123")
+        val name = prefs.all.keys.single { it.contains("ct") }
+        val bytes = Base64.getDecoder().decode(prefs.getString(name, null))
+        bytes[0] = (bytes[0].toInt() xor 0x01).toByte()
+        prefs.edit().putString(name, Base64.getEncoder().encodeToString(bytes)).commit()
+        assertNull(store().apiKey())
+        assertFalse(ciphertextStored())
+    }
+
+    @Test fun missingKeystoreEntryClearsTheStoredData() {
+        store().save("test-key-123")
+        androidKeyStore().deleteEntry(alias)
+        assertNull(store().apiKey())
+        assertFalse(ciphertextStored())
+    }
+
+    @Test fun missingIvClearsTheStoredData() {
+        store().save("test-key-123")
+        prefs.edit().remove(prefs.all.keys.single { it.contains("iv") }).commit()
+        assertNull(store().apiKey())
+        assertFalse(ciphertextStored())
+    }
+
     @Test fun keyLivesInAndroidKeyStoreAndIsNotExtractable() {
         store().save("test-key-123")
         val ks = androidKeyStore()
