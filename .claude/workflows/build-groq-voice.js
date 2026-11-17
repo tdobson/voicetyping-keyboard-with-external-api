@@ -1,7 +1,7 @@
 export const meta = {
   name: 'build-groq-voice',
   description: 'Plan, build, test, review and prove the Groq Voice Android keyboard APK from the approved spec',
-  whenToUse: 'Scheduled 5am build of ~/dev/android-groq-keyboard from docs/superpowers/specs/2026-11-16-groq-voice-keyboard-design.md',
+  whenToUse: 'Scheduled overnight build of ~/dev/android-groq-keyboard from docs/superpowers/specs/2026-11-16-groq-voice-keyboard-design.md',
   phases: [
     { title: 'Plan', detail: 'implementation plan from the spec' },
     { title: 'Scaffold', detail: 'Gradle project, signing, test harness, verify.sh' },
