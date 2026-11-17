@@ -18,10 +18,12 @@ script), so it runs as fast JVM tests. Thin Android adapters (recorder, keystore
 settings activity) implement the core's interfaces and are tested with Robolectric or on the emulator.
 
 **Tech stack:** Kotlin 2.4.21 (AGP built-in Kotlin), AGP 9.5.1, Gradle 9.9.1 (wrapper), JDK 21, Android Views,
-OkHttp 5.5.1, kotlinx-coroutines 1.11.0, AndroidX core-ktx 1.19.1, appcompat 1.8.0, lifecycle-runtime-ktx 2.11.0.
-Tests: JUnit 4.13.2, kotlinx-coroutines-test 1.11.0, OkHttp `mockwebserver3` 5.5.1, Robolectric 4.18,
+OkHttp 5.4.0, kotlinx-coroutines 1.11.0, AndroidX core-ktx 1.18.0, appcompat 1.8.0, lifecycle-runtime-ktx 2.11.0.
+Tests: JUnit 4.13.2, kotlinx-coroutines-test 1.11.0, OkHttp `mockwebserver3` 5.4.0, Robolectric 4.18,
 AndroidX test runner/rules 1.7.0, ext-junit 1.3.0, UiAutomator 2.4.1.
-(All versions checked on maven.google.com, Maven Central and services.gradle.org on 2026-11-17.)
+(All versions checked on maven.google.com, Maven Central and services.gradle.org on 2026-11-17.
+core-ktx 1.19.x and okhttp-android 5.5.x declare minCompileSdk 37, so they are pinned to 1.18.0 and 5.4.0
+while the spec fixes compileSdk 36. Do not bump them without moving compileSdk.)
 
 **Source of truth:** `docs/superpowers/specs/2026-11-16-groq-voice-keyboard-design.md`. This plan refines it;
 refinements are listed in "Spec refinements" below so reviewers can check them.
@@ -220,10 +222,10 @@ touch settings.gradle.kts
 [versions]
 agp = "9.5.1"
 kotlin = "2.4.21"
-coreKtx = "1.19.1"
+coreKtx = "1.18.0"
 appcompat = "1.8.0"
 lifecycle = "2.11.0"
-okhttp = "5.5.1"
+okhttp = "5.4.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
 robolectric = "4.18"
