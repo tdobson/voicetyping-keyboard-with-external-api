@@ -44,6 +44,13 @@ class RetryPolicyTest {
 
     @Test fun `retry-after is capped at sixty seconds`() = assertEquals(60_000L, p.delayAfter(2, 3_600_000))
 
+    @Test fun `a retry-after longer than the cap is not worth waiting for`() {
+        assertEquals(false, p.retryAfterTooLong(null))
+        assertEquals(false, p.retryAfterTooLong(60_000))
+        assertEquals(true, p.retryAfterTooLong(60_001))
+        assertEquals(true, p.retryAfterTooLong(3_600_000))
+    }
+
     @Test fun `full failure sleeps 242 seconds like desktop`() =
         assertEquals(242_000L, (1..9).sumOf { p.delayAfter(it, null) })
 }

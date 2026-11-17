@@ -23,6 +23,12 @@ class RetryPolicy(
     /** Like the desktop, only the first failure waits for connectivity instead of sleeping. */
     fun waitForConnectivityAfter(failedAttempt: Int): Boolean = failedAttempt == 1
 
+    /**
+     * A retry-after beyond [maxRetryAfterMs] (e.g. "retry in 1 hour" for a used-up quota) is not worth waiting
+     * for, and retrying sooner only re-uploads the audio to be refused again: stop and keep the audio pending.
+     */
+    fun retryAfterTooLong(retryAfterMs: Long?): Boolean = retryAfterMs != null && retryAfterMs > maxRetryAfterMs
+
     /** Sleep before the next attempt: retry-after (capped) if given; else 0 after attempt 1; else the backoff. */
     fun delayAfter(failedAttempt: Int, retryAfterMs: Long?): Long = when {
         retryAfterMs != null -> retryAfterMs.coerceIn(0, maxRetryAfterMs)

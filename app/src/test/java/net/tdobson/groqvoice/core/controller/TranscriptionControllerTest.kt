@@ -636,5 +636,37 @@ class TranscriptionControllerTest {
         assertEquals(listOf(KEY, KEY, "test-key-456"), api.calls.map { it.second })
     }
 
+    @Test fun `a recording stopped because the keyboard was hidden goes to the clipboard, not the field`() = runTest {
+        val api = api(Success(" Hello there."))
+        val delivery = FakeDelivery(field = F1)
+        val c = controller(api, delivery)
+        assertTrue(c.startRecording())
+        c.stopAndTranscribe(intoField = false)
+        advanceUntilIdle()
+        assertTrue(delivery.committed.isEmpty())
+        assertEquals("Hello there.", delivery.clipboard)
+        assertEquals("Hello there.", store.lastText)
+        assertEquals(Status.TextReady, listener.statuses.last())
+    }
+
+    @Test fun `429 asking to wait longer than the cap stops at once and keeps the audio`() = runTest {
+        val api = api(HttpError(429, "Rate limit reached", 3_600_000), Success("ok"))
+        controller(api).recordAndStop()
+        advanceUntilIdle()
+        assertEquals(1, api.calls.size)
+        assertEquals(0, gate.calls)
+        assertEquals(Status.RateLimited(3_600_000), listener.statuses.last())
+        assertFalse(Cue.Retry in listener.cues)
+        assertEquals(Cue.Error, listener.cues.last())
+        assertEquals(1, store.pending().size)
+    }
+
+    @Test fun `429 asking to wait exactly the cap still waits and retries`() = runTest {
+        val api = api(HttpError(429, null, 60_000), Success("ok"))
+        controller(api).recordAndStop()
+        advanceUntilIdle()
+        assertEquals(listOf(0L, 60_000L), api.callTimes)
+    }
+
     private companion object { const val KEY = "test-key-123" }
 }

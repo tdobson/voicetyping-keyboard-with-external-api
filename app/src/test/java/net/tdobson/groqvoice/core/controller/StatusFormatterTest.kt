@@ -51,6 +51,13 @@ class StatusFormatterTest {
         assertEquals("Recording failed", text(Status.RecordingFailed))
     }
 
+    @Test fun `rate limited says how long to wait, rounded up`() {
+        assertEquals("Groq rate limit, try again in 2 min, saved as unsent", text(Status.RateLimited(61_000)))
+        assertEquals("Groq rate limit, try again in 59 min, saved as unsent", text(Status.RateLimited(3_540_000)))
+        assertEquals("Groq rate limit, try again in 1 h, saved as unsent", text(Status.RateLimited(3_600_000)))
+        assertEquals("Groq rate limit, try again in 3 h, saved as unsent", text(Status.RateLimited(7_300_000)))
+    }
+
     @Test fun `unsent chip`() {
         assertNull(StatusFormatter.unsentChip(0))
         assertEquals("⟳ 2 unsent", StatusFormatter.unsentChip(2))
@@ -61,7 +68,7 @@ class StatusFormatterTest {
         val all = inFlight + setOf(
             Status.Idle, Status.Recording(0, false), Status.Recording(0, true), Status.TextReady, Status.NothingHeard,
             Status.HoldToTalk, Status.NoApiKey, Status.NoMicPermission, Status.AuthRejected, Status.Rejected("x"),
-            Status.GaveUp(10), Status.Cancelled, Status.RecordingFailed,
+            Status.GaveUp(10), Status.Cancelled, Status.RecordingFailed, Status.RateLimited(3_600_000),
         )
         for (s in all) {
             if (s in inFlight) assertTrue("$s", StatusFormatter.showsCancel(s)) else assertFalse("$s", StatusFormatter.showsCancel(s))

@@ -16,6 +16,8 @@ sealed interface Status {
     data object AuthRejected : Status
     data class Rejected(val message: String) : Status
     data class GaveUp(val attempts: Int) : Status
+    /** Groq asked us to wait longer than RetryPolicy.maxRetryAfterMs (e.g. a used-up daily quota). */
+    data class RateLimited(val retryAfterMs: Long) : Status
     data object Cancelled : Status
     data object RecordingFailed : Status
 }

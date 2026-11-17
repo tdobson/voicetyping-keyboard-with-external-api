@@ -148,8 +148,10 @@ scripts/verify.sh                                                               
 2. **First-failure connectivity wait.** As on the desktop, after attempt 1 fails with any retryable error the
    controller waits on `ConnectivityGate.awaitOnline()` instead of sleeping. After attempt n >= 2 it sleeps
    `min(1000 * 2^(n-1), 60000)` ms. Total sleep across a full 10-attempt failure is 242 s, the same as desktop.
-3. **429 `retry-after`.** Honoured as given in seconds or HTTP-date, but capped at 60 s (the backoff cap), so a
-   "retry in 1 hour" answer cannot pin the keyboard for an hour. After 10 attempts the audio stays in `pending/`.
+3. **429 `retry-after`.** Honoured as given in seconds or HTTP-date when it is at most 60 s (the backoff cap).
+   A longer one (e.g. "retry in 1 hour" for a used-up daily quota) stops sending at once with
+   "Groq rate limit, try again in N min, saved as unsent" and an error cue, instead of re-uploading the audio
+   9 more times to be refused again. The audio stays in `pending/` for the chip. After 10 attempts likewise.
 4. **Requests while busy.** Transcriptions are serialised by a `Mutex`. A new recording may be made while an
    earlier one is still sending; each job captured its own target field at stop time and is delivered in order.
 5. **"✕" cancel** cancels every in-flight and queued transcription; their audio stays in `pending/`.

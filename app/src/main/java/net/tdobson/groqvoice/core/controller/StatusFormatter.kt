@@ -21,6 +21,7 @@ object StatusFormatter {
         Status.AuthRejected -> "API key rejected, open settings"
         is Status.Rejected -> "Groq: ${status.message}"
         is Status.GaveUp -> "Couldn't send after ${status.attempts} tries, saved as unsent"
+        is Status.RateLimited -> "Groq rate limit, try again in ${waitText(status.retryAfterMs)}, saved as unsent"
         Status.Cancelled -> "Cancelled, saved as unsent"
         Status.RecordingFailed -> "Recording failed"
     }
@@ -30,6 +31,12 @@ object StatusFormatter {
     /** The ✕ cancel is offered while a recording is being sent. */
     fun showsCancel(status: Status): Boolean =
         status == Status.Transcribing || status is Status.Retrying || status == Status.WaitingForSignal
+
+    /** Minutes rounded up below an hour, else hours rounded up. */
+    private fun waitText(ms: Long): String {
+        val minutes = (ms.coerceAtLeast(0) + 59_999) / 60_000
+        return if (minutes < 60) "$minutes min" else "${(minutes + 59) / 60} h"
+    }
 
     private fun clock(elapsedMs: Long): String {
         val seconds = elapsedMs.coerceAtLeast(0) / 1_000

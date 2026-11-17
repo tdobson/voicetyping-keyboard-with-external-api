@@ -74,13 +74,17 @@ class TranscriptionController(
         listener.onStatus(Status.Recording(recordingStartedAt, locked = true))
     }
 
-    /** GestureEvent.Release, the Stop tap, the max-duration limit, or the keyboard being hidden. */
-    fun stopAndTranscribe() {
+    /**
+     * GestureEvent.Release, the Stop tap, the max-duration limit, or the keyboard being hidden. With
+     * [intoField] false (keyboard hidden, plan refinement 9) the text goes to the clipboard plus ↺ even if the
+     * field still has focus, so nothing is typed into a field while the keyboard is out of sight.
+     */
+    fun stopAndTranscribe(intoField: Boolean = true) {
         val file = recordingFile ?: return
         recordingFile = null
         val finalised = recorder.stop()
         listener.onCue(Cue.RecordStop)
-        val target = delivery.currentField()
+        val target = if (intoField) delivery.currentField() else null
         if (!finalised || !store.isValid(file)) {
             store.discard(file)
             listener.onStatus(Status.RecordingFailed)
@@ -176,6 +180,7 @@ class TranscriptionController(
                 FailureClass.AuthRejected -> return fail(Status.AuthRejected)
                 is FailureClass.Rejected -> return fail(Status.Rejected(failure.message))
                 is FailureClass.Retryable -> {
+                    if (retry.retryAfterTooLong(failure.retryAfterMs)) return fail(Status.RateLimited(failure.retryAfterMs!!))
                     if (!retry.hasAttemptsLeft(attempt)) break
                     cue(Cue.Retry)
                     if (retry.waitForConnectivityAfter(attempt)) {
