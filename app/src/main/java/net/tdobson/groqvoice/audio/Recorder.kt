@@ -61,19 +61,18 @@ class Recorder(
         val f = file
         recorder = null
         file = null
-        // MediaRecorder may or may not manage to finalise a few milliseconds of audio; either way it is not
-        // speech, so anything shorter than MIN_RECORDING_MS is consistently "nothing recorded".
-        val longEnough = now() - startedAt >= MIN_RECORDING_MS
-        val ok = try {
+        val durationMs = now() - startedAt
+        val threw = try {
             r.stop()
-            longEnough
+            false
         } catch (e: RuntimeException) {
-            // stop() throws when no audio was captured yet. After the max-duration stop the file is already final.
-            Logx.w(e) { "recorder stop failed (maxReached=$maxReached)" }
-            maxReached && f != null && f.length() > 0
+            // stop() throws when no audio was captured yet, but also on encoder errors after real audio.
+            Logx.w(e) { "recorder stop failed (maxReached=$maxReached, ${durationMs} ms)" }
+            true
         } finally {
             r.release()
         }
+        val ok = f != null && StoppedRecording.keep(threw, maxReached, durationMs, f.length())
         if (!ok) f?.delete()
         return ok
     }
