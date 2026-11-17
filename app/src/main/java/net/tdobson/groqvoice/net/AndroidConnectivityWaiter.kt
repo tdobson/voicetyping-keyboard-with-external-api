@@ -43,7 +43,8 @@ suspend fun awaitValidatedNetwork(source: ValidatedNetworkSource) {
 
 /**
  * Spec "waiting for connectivity": wait for a validated default network, then confirm Groq answers a HEAD,
- * probing every [intervalMs] (desktop: 3 s). Cancellable at any point (the keyboard's ✕).
+ * probing every [intervalMs] (desktop: 3 s) while the network stays validated. Cancellable at any point (the
+ * keyboard's ✕).
  */
 class AndroidConnectivityWaiter(
     private val source: ValidatedNetworkSource,
@@ -53,10 +54,8 @@ class AndroidConnectivityWaiter(
     constructor(cm: ConnectivityManager, probe: GroqReachabilityProbe, intervalMs: Long = 3_000) :
         this(AndroidNetworkSource(cm), probe::isReachable, intervalMs)
 
-    override suspend fun awaitOnline() {
-        awaitValidatedNetwork(source)
-        awaitReachable(reachable, intervalMs)
-    }
+    /** Validation is re-checked before every probe: if the network loses it, probing stops until it returns. */
+    override suspend fun awaitOnline() = awaitReachable(reachable, intervalMs) { awaitValidatedNetwork(source) }
 }
 
 class AndroidNetworkSource(private val cm: ConnectivityManager) : ValidatedNetworkSource {

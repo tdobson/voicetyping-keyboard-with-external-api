@@ -27,6 +27,13 @@ class ReachabilityLoopTest {
         assertEquals(6_000L, currentTime)
     }
 
+    @Test fun `the gate before each probe runs before every probe`() = runTest {
+        val log = mutableListOf<String>()
+        val answers = ArrayDeque(listOf(false, true))
+        awaitReachable({ log += "probe@$currentTime"; answers.removeFirst() }, 3_000) { log += "gate@$currentTime" }
+        assertEquals(listOf("gate@0", "probe@0", "gate@3000", "probe@3000"), log)
+    }
+
     @Test fun `never reachable keeps waiting until cancelled`() = runTest {
         var probes = 0
         val job = launch { awaitReachable({ probes++; false }) }

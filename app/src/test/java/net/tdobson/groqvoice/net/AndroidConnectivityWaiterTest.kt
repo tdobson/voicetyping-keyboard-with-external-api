@@ -111,6 +111,26 @@ class AndroidConnectivityWaiterTest {
         assertTrue(done)
     }
 
+    @Test fun `losing validation mid-loop stops probing until the network is validated again`() = runTest {
+        val src = FakeSource(validated = true)
+        val probeTimes = mutableListOf<Long>()
+        var answer = false
+        val waiter = AndroidConnectivityWaiter(src, reachable = { probeTimes += testScheduler.currentTime; answer })
+        var done = false
+        launch { waiter.awaitOnline(); done = true }
+        runCurrent()
+        assertEquals(listOf(0L), probeTimes)
+        src.validated = false // e.g. a data stall detected in a tunnel
+        advanceTimeBy(600_000); runCurrent()
+        assertEquals("no probes without a validated network", listOf(0L), probeTimes)
+        assertTrue(src.listening)
+        answer = true
+        src.deliverValidated(); runCurrent()
+        assertEquals(2, probeTimes.size)
+        assertTrue(done)
+        assertFalse(src.listening)
+    }
+
     @Test fun `cancel during the probe loop stops probing`() = runTest {
         val src = FakeSource(validated = true)
         var probes = 0
