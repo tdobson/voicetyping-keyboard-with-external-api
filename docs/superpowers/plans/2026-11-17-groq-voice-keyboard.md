@@ -162,8 +162,10 @@ scripts/verify.sh                                                               
 8. **Missing key or mic permission.** The press is refused before recording starts, with status
    "Add your Groq API key in Groq Voice settings" or "Allow the microphone in Groq Voice settings". Tapping the
    status opens SettingsActivity.
-9. **Keyboard hidden while recording** (`onFinishInputView`) stops the recording and transcribes it. The field has
-   gone, so the text goes to the clipboard plus ↺. Nothing is discarded.
+9. **Keyboard hidden while recording** (`onFinishInputView`) stops the recording and transcribes it. The text
+   goes to the clipboard plus ↺, even when only the keyboard was hidden (Back) and the field kept focus, so
+   nothing is typed while the keyboard is out of sight (`stopAndTranscribe(intoField = false)`). Nothing is
+   discarded.
 10. **Settings additions:** "Try it here" multi-line field (agreed with Tim), and "Unsent recordings: N, Delete",
     so an unsendable file (Groq 400) can be cleared.
 11. **Audio bitrate** 24 kbps Opus, so 60 minutes is about 10.8 MB, under Groq's 25 MB upload limit.
@@ -171,6 +173,11 @@ scripts/verify.sh                                                               
     timeouts are 30 s each.
 13. **Backups:** `allowBackup="false"` and `dataExtractionRules` excluding everything (Android 12+ device
     transfer ignores `allowBackup`).
+14. **Input restarts count as a new field.** The session counter is bumped on every `onStartInput`, including
+    `restarting = true` (rotation, or an app calling `restartInput` on the same field). A transcription in
+    flight across a restart goes to the clipboard plus ↺ rather than the field. This fails safe: an app may
+    reuse one EditText for a different conversation and restart input, and text must never reach the wrong
+    chat. Open question for Tim: keep the session on a same-package, same-field-id restart instead?
 
 ---
 

@@ -13,12 +13,16 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import net.tdobson.groqvoice.R
 import net.tdobson.groqvoice.audio.Recorder
+import net.tdobson.groqvoice.core.controller.ApiKeyProvider
+import net.tdobson.groqvoice.core.controller.AudioRecorder
+import net.tdobson.groqvoice.core.controller.ConnectivityGate
 import net.tdobson.groqvoice.core.controller.ControllerListener
 import net.tdobson.groqvoice.core.controller.Cue
 import net.tdobson.groqvoice.core.controller.FeedbackPolicy
@@ -31,6 +35,7 @@ import net.tdobson.groqvoice.core.keys.EnterAction
 import net.tdobson.groqvoice.core.keys.EnterKeyResolver
 import net.tdobson.groqvoice.core.net.GroqClient
 import net.tdobson.groqvoice.core.net.GroqReachabilityProbe
+import net.tdobson.groqvoice.core.net.TranscriptionApi
 import net.tdobson.groqvoice.net.AndroidConnectivityWaiter
 import net.tdobson.groqvoice.security.ApiKeyStore
 import net.tdobson.groqvoice.settings.AppSettings
@@ -42,7 +47,7 @@ import net.tdobson.groqvoice.util.Logx
  * The keyboard. Owns the view and a main-thread coroutine scope, and wires the Android adapters into the
  * TranscriptionController. Text is only ever committed by the controller after its field-identity check.
  */
-class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerListener {
+open class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerListener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private lateinit var settings: AppSettings
@@ -61,24 +66,50 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
         val recovered = store.recoverInterrupted()
         if (recovered > 0) Logx.d { "recovered $recovered interrupted recording(s)" }
         settings = AppSettings.from(this)
-        val http = GroqClient.defaultHttpClient()
         delivery = ImeDelivery({ currentInputConnection }, getSystemService(ClipboardManager::class.java))
         feedback = Feedback(this)
+        val ports = createPorts()
         controller = TranscriptionController(
             scope = scope,
-            api = GroqClient(http),
-            gate = AndroidConnectivityWaiter(getSystemService(ConnectivityManager::class.java), GroqReachabilityProbe(http)),
-            recorder = Recorder(this),
+            api = ports.api,
+            gate = ports.gate,
+            recorder = ports.recorder,
             store = store,
-            keys = ApiKeyStore.from(this),
+            keys = ports.keys,
             requests = settings,
-            mic = MicPermission { checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED },
+            mic = ports.mic,
             delivery = delivery,
             listener = this,
             clock = { SystemClock.elapsedRealtime() },
         )
         lastPending = store.pendingCount()
     }
+
+    /** The parts that need a microphone, the Keystore or the network. */
+    internal class Ports(
+        val api: TranscriptionApi,
+        val gate: ConnectivityGate,
+        val recorder: AudioRecorder,
+        val keys: ApiKeyProvider,
+        val mic: MicPermission,
+    )
+
+    /** Test seam: a Robolectric subclass swaps in fakes. */
+    @VisibleForTesting
+    internal open fun createPorts(): Ports {
+        val http = GroqClient.defaultHttpClient()
+        return Ports(
+            api = GroqClient(http),
+            gate = AndroidConnectivityWaiter(getSystemService(ConnectivityManager::class.java), GroqReachabilityProbe(http)),
+            recorder = Recorder(this),
+            keys = ApiKeyStore.from(this),
+            mic = MicPermission { checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED },
+        )
+    }
+
+    /** The field a transcription stopped now would be delivered to. */
+    @VisibleForTesting
+    internal fun currentField(): FieldIdentity? = delivery.currentField()
 
     @SuppressLint("InflateParams") // the IME window supplies the parent; there is none to inflate against
     override fun onCreateInputView(): View {
@@ -114,14 +145,16 @@ class VoiceKeyboardService : InputMethodService(), KeyboardActions, ControllerLi
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
-        // Keyboard hidden while recording: keep the speech and send it (spec refinement 9).
-        if (controller.isRecording) controller.stopAndTranscribe()
+        // Keyboard hidden while recording: keep the speech and send it; the text goes to the clipboard plus ↺,
+        // never typed into a field the user can no longer see the keyboard for (plan refinement 9).
+        if (controller.isRecording) controller.stopAndTranscribe(intoField = false)
         binder?.resetGesture()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onDestroy() {
-        if (controller.isRecording) controller.stopAndTranscribe()
+        // The scope dies next, so this only moves the audio to pending/ for the chip.
+        if (controller.isRecording) controller.stopAndTranscribe(intoField = false)
         scope.cancel()
         binder?.release()
         binder = null
