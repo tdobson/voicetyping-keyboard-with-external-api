@@ -171,6 +171,18 @@ class GroqClientTest {
         assertTrue("got $r", r is NetworkError)
     }
 
+    @Test fun `a connection dropped mid-request is one upload, not a silent OkHttp retry`() {
+        // A pooled connection that dies while the next upload is under way: OkHttp's default would re-send the
+        // whole body on a new connection, outside the controller's attempt budget.
+        server.enqueue(MockResponse.Builder().code(200).body("first").build())
+        server.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.ShutdownConnection).build())
+        server.enqueue(MockResponse.Builder().code(200).body("silently retried").build())
+        assertEquals(Success("first"), transcribe())
+        val r = transcribe()
+        assertTrue("got $r", r is NetworkError)
+        assertEquals(2, server.requestCount)
+    }
+
     @Test fun `server gone gives network error`() {
         server.close()
         val r = transcribe()

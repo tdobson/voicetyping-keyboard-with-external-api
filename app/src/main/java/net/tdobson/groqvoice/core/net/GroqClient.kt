@@ -25,6 +25,12 @@ class GroqClient(
     private val nowMs: () -> Long = System::currentTimeMillis,
 ) : TranscriptionApi {
 
+    /**
+     * Same pool and timeouts, but no OkHttp-level retry: a dropped connection would otherwise re-send the whole
+     * upload behind the controller's back, outside its 10-attempt budget and the "Retrying (n/10)" status.
+     */
+    private val uploads: OkHttpClient = http.newBuilder().retryOnConnectionFailure(false).build()
+
     override suspend fun transcribe(audio: File, apiKey: String, request: TranscriptionRequest): TranscriptionResult {
         if (!audio.isFile) return TranscriptionResult.UnexpectedError(FileNotFoundException("recording is missing"))
         return try {
@@ -36,7 +42,7 @@ class GroqClient(
                 .addFormDataPart("temperature", request.temperature)
                 .addFormDataPart("response_format", request.responseFormat)
                 .build()
-            val call = http.newCall(
+            val call = uploads.newCall(
                 Request.Builder()
                     .url(baseUrl.resolve("audio/transcriptions")!!)
                     .header("Authorization", "Bearer $apiKey")
