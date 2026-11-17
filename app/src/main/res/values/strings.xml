@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Groq Voice</string>
+
+    <!-- Keyboard -->
+    <string name="key_mic_description">Microphone: hold to talk, slide up to lock, slide left to cancel</string>
+    <string name="key_stop_description">Stop and send</string>
+    <string name="key_backspace_description">Backspace</string>
+    <string name="key_space_description">Space</string>
+    <string name="key_space_label">space</string>
+    <string name="key_enter_description">Enter</string>
+    <string name="key_reinsert_label">↺</string>
+    <string name="key_reinsert_description">Insert last text again</string>
+    <string name="key_globe_label">🌐</string>
+    <string name="key_globe_description">Switch keyboard (long press to choose)</string>
+    <string name="status_cancel_label">✕</string>
+    <string name="status_cancel_description">Cancel sending</string>
+    <string name="unsent_chip_description">Send unsent recordings</string>
 </resources>

@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="groq_orange">#F55036</color>
+    <color name="groq_orange_dark">#C93D27</color>
     <color name="ic_launcher_background">#F55036</color>
+    <color name="kb_background">#202124</color>
+    <color name="kb_key">#3C4043</color>
+    <color name="kb_key_pressed">#5F6368</color>
+    <color name="kb_text">#FFFFFF</color>
+    <color name="kb_text_dim">#BDC1C6</color>
+    <color name="recording_red">#E53935</color>
+    <color name="recording_ring_fill">#33E53935</color>
 </resources>

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The keyboard paints its own dark background whatever the IME window theme is, so Overdraw is expected. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/keyboard_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/kb_background"
+    android:orientation="vertical"
+    android:paddingStart="8dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="8dp"
+    tools:ignore="Overdraw">
+
+    <!-- Status line -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="8dp"
+            android:indeterminateTint="@color/groq_orange"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:maxLines="2"
+            android:textColor="@color/kb_text_dim"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/status_cancel"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/status_cancel_description"
+            android:gravity="center"
+            android:text="@string/status_cancel_label"
+            android:textColor="@color/kb_text"
+            android:textSize="18sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/unsent_chip"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/chip_bg"
+            android:contentDescription="@string/unsent_chip_description"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/kb_text"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Mic row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/key_globe"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/key_globe_description"
+            android:gravity="center"
+            android:text="@string/key_globe_label"
+            android:textColor="@color/kb_text"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/key_reinsert"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/key_reinsert_description"
+            android:gravity="center"
+            android:text="@string/key_reinsert_label"
+            android:textColor="@color/kb_text"
+            android:textSize="24sp" />
+
+        <FrameLayout
+            android:layout_width="132dp"
+            android:layout_height="132dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp">
+
+            <View
+                android:id="@+id/mic_ring"
+                android:layout_width="124dp"
+                android:layout_height="124dp"
+                android:layout_gravity="center"
+                android:background="@drawable/mic_ring"
+                android:visibility="invisible" />
+
+            <ImageButton
+                android:id="@+id/mic_button"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center"
+                android:background="@drawable/mic_circle"
+                android:contentDescription="@string/key_mic_description"
+                android:scaleType="center"
+                android:src="@drawable/ic_mic" />
+        </FrameLayout>
+
+        <ImageButton
+            android:id="@+id/key_backspace"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="2"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/key_backspace_description"
+            android:scaleType="center"
+            android:src="@drawable/ic_backspace" />
+    </LinearLayout>
+
+    <!-- Space and enter -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/key_space"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="3"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/key_space_description"
+            android:gravity="center"
+            android:text="@string/key_space_label"
+            android:textColor="@color/kb_text_dim"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/key_enter"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/kb_key_bg"
+            android:contentDescription="@string/key_enter_description"
+            android:gravity="center"
+            android:textColor="@color/kb_text"
+            android:textSize="18sp" />
+    </LinearLayout>
+</LinearLayout>
