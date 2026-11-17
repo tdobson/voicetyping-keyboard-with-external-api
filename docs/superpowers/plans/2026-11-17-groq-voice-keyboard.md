@@ -1505,6 +1505,26 @@ PULSE_SOURCE=groqvoice_test.monitor EMU_EXTRA_ARGS="-allow-host-audio" scripts/e
 Do not change the default sink or source. If the emulator mic stays silent, check
 `/tmp/groqvoice-emulator.log`, and try `EMU_EXTRA_ARGS="-allow-host-audio -qemu -audiodev pa,id=snd0,in.name=groqvoice_test.monitor"`.
 
+**What actually worked (Prove phase, 2026-11-17, emulator 37.2.13).** The recipe above leaves the mic silent:
+
+1. `-no-window` makes the launcher run `qemu-system-x86_64-headless`, which has no PulseAudio at all
+   (the log says ``Could not init `pa' audio driver``). Run the windowed binary on a private display instead:
+   `Xvfb :87 -screen 0 1280x2600x24 -nolisten tcp &`, then start the emulator with `DISPLAY=:87` and without `-no-window`.
+   `-audiodev` does not exist in this qemu (2.12 based).
+2. Host mic audio is gated by the console. After every boot: `adb -s emulator-5554 emu avd hostmicon`.
+3. Do not point qemu at the raw `.monitor`. Its old pa input stalls for good after a few seconds (the guest HAL
+   logs `pcm_readi was late delivering frames, inserting 16000 us of silence` about 62 times a second). Put a
+   remap source in front of it, and send the emulator's own output to a second null sink so cues never reach the speakers:
+   `pactl load-module module-null-sink sink_name=groqvoice_out`,
+   `pactl load-module module-remap-source source_name=groqvoice_mic master=groqvoice_test.monitor`,
+   then start with `PULSE_SOURCE=groqvoice_mic PULSE_SINK=groqvoice_out`. Do not set `PULSE_LATENCY_MSEC` (200 ms garbled the audio).
+4. Play a WAV, not the Ogg (`paplay` cannot open Ogg/Opus here): `ffmpeg -i sample.ogg -ar 48000 -ac 2 sample.wav`.
+5. **Never run `uiautomator dump` or `screencap` while the clip plays.** The load spike stalls qemu's mic input
+   until the emulator restarts. Capture lock-state evidence after the clip ends, before tapping Stop.
+6. Count `inserting 16000 us of silence` lines in logcat during a run: about 1 means clean audio, about 1800 means silent.
+   If it stalls, only an emulator restart helps (moving the stream or `hostmicoff/on` does not).
+7. A systemui "isn't responding" dialog often appears after a cold boot on a loaded host. Tap Wait first.
+
 - [ ] **Step 5: Install and configure on the emulator only.**
 
 ```bash
