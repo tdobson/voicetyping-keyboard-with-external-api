@@ -3,6 +3,9 @@ package net.tdobson.groqvoice.ime
 import android.content.ComponentName
 import android.content.Context
 import android.os.ParcelFileDescriptor
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.test.core.app.ActivityScenario
@@ -76,12 +79,25 @@ class ImeServiceTest {
         return text
     }
 
+    private fun currentIme() = shell("settings get secure default_input_method").trim().replace("$pkg/$pkg.", "$pkg/.")
+
     private fun openKeyboardOnTryItHere() {
+        // Right after a reinstall the system can take a moment to accept `ime set`.
+        assertTrue("our IME is selected", device.wait({ currentIme() == ime || run { shell("ime set $ime"); false } }, 10_000))
         scenario = ActivityScenario.launch(SettingsActivity::class.java)
         scenario!!.onActivity { it.findViewById<EditText>(R.id.try_it_here).requestFocus() }
+        device.waitForIdle()
         val field = device.wait(Until.findObject(By.res(pkg, "try_it_here")), 10_000)
         assertNotNull("try_it_here on screen", field)
         field.click()
+        // Showing the keyboard on a tap is the system's job; if the tap raced the window gaining focus, ask once more.
+        if (!device.wait(Until.hasObject(By.res(pkg, "mic_button")), 5_000)) {
+            scenario!!.onActivity {
+                val f = it.findViewById<EditText>(R.id.try_it_here)
+                f.requestFocus()
+                it.getSystemService(InputMethodManager::class.java).showSoftInput(f, 0)
+            }
+        }
         assertTrue("our keyboard appears", device.wait(Until.hasObject(By.res(pkg, "mic_button")), 10_000))
     }
 
@@ -90,7 +106,7 @@ class ImeServiceTest {
         val ours = ComponentName(pkg, "$pkg.ime.VoiceKeyboardService")
         assertTrue(imm.inputMethodList.any { it.component == ours })
         assertTrue(imm.enabledInputMethodList.any { it.component == ours })
-        assertEquals(ime, shell("settings get secure default_input_method").trim().replace("$pkg/$pkg.", "$pkg/."))
+        assertEquals(ime, currentIme())
     }
 
     @Test fun keysTypeIntoTheField() {
@@ -112,7 +128,7 @@ class ImeServiceTest {
 
     @Test fun shortMicPressHintsHoldToTalk() {
         openKeyboardOnTryItHere()
-        key("mic_button").click(300)
+        pressWithEventTimes(key("mic_button"), holdMs = 300)
         assertTrue(
             "status shows Hold to talk",
             device.wait(Until.hasObject(By.res(pkg, "status_text").text("Hold to talk")), 5_000),
@@ -123,6 +139,25 @@ class ImeServiceTest {
     @Test fun idleHintAndNoUnsentChipOnAFreshKeyboard() {
         openKeyboardOnTryItHere()
         assertEquals("Hold to talk, slide up to lock", key("status_text").text)
+    }
+
+    /**
+     * A press whose DOWN and UP carry event times [holdMs] apart, whatever the emulator's speed. The gesture
+     * detector uses event times, so this is a short press by construction and never sends audio anywhere.
+     */
+    private fun pressWithEventTimes(target: UiObject2, holdMs: Long) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val c = target.visibleCenter
+        val down = SystemClock.uptimeMillis()
+        fun inject(action: Int, time: Long) {
+            val e = MotionEvent.obtain(down, time, action, c.x.toFloat(), c.y.toFloat(), 0)
+            e.source = InputDevice.SOURCE_TOUCHSCREEN
+            assertTrue(automation.injectInputEvent(e, true))
+            e.recycle()
+        }
+        inject(MotionEvent.ACTION_DOWN, down)
+        SystemClock.sleep(holdMs)
+        inject(MotionEvent.ACTION_UP, down + holdMs)
     }
 
     private fun UiDevice.wait(condition: () -> Boolean, timeoutMs: Long): Boolean {
